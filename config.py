@@ -1,0 +1,1 @@
+config={'paths': {'cifardatapath': 'data/cifar-10-batches-py', 'downloadurl': 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz', 'dataseturl': 'https://www.cs.toronto.edu/~kriz/cifar.html', 'compressed_file': 'data/cifar-10-python.tar.gz', 'datapath': 'data/'}, 'dataset_details': {'dataset_version': 'cifar-10', 'programming_language': 'python', 'test_set': 'test_batch'}}
