@@ -36,8 +36,11 @@ def even_instances(data, labels, limit=500):
 	return data, labels
 
 #this is re-usal of some code that I used at one of my classes for loading cifar10 images 
-def reshape_images(data, size_image, n_channels):
-	data_float = skimage.img_as_float(data)
+def reshape_images(data, size_image, n_channels, float=True):
+	if float:
+		data_float = skimage.img_as_float(data)
+	else:
+		data_float = data
 	rgb_images = np.zeros(data.shape[0]*size_image*size_image*n_channels)
 	for i in range(n_channels):
 		channel_values = data_float.T[i*size_image*size_image:(i+1)*size_image*size_image]

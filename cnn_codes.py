@@ -1,15 +1,14 @@
 from config import config
 import pickle
 import torch
-import torch.nn as nn
 import numpy as np
-from torchvision import datasets, models, transforms
+from torchvision import models, transforms
 from torch.utils.data import Dataset, DataLoader
 import time
-from sklearn.manifold import TSNE
 from data_handling import unpickle
 from image_feature_extraction import load_images, reshape_images, even_instances
-
+import matplotlib.pyplot as plt 
+import skimage.transform
 
 #path to network_trained_representations
 path_network_representations = config['paths']['network_representations']
@@ -25,12 +24,13 @@ print("The shape of train data: ", train_data.shape)
 n_channels =3
 #length of width and height of each image
 size_image = 32
-train_data = reshape_images(train_data, size_image, n_channels)
-test_data = reshape_images(test_data, size_image, n_channels)
+train_data = reshape_images(train_data, size_image, n_channels, float=False)
+test_data = reshape_images(test_data, size_image, n_channels, float=False)
 
 
 #introdcing the data
 #normalization values taken from this thread: https://github.com/kuangliu/pytorch-cifar/issues/19
+#no normalization for now
 #although the normalization values for CIFAR-10 from pytorch forum are 0.5, 0.5, 0.5; 0.5, 0.5, 0.5
 transform = transforms.Compose([
         transforms.ToPILImage(),
@@ -40,9 +40,8 @@ transform = transforms.Compose([
         #                      (0.247, 0.243, 0.261))
         
     ])
-
 class restrictedCIFAR10(Dataset):
-    def __init__(self, data, transform=transform):
+    def __init__(self, data, transform):
 
         self.data = data
         self.transform = transform
@@ -55,7 +54,7 @@ class restrictedCIFAR10(Dataset):
         sample = image
 
         if self.transform:
-            sample = self.transform(image.astype(np.uint8))
+            sample = transform(image.astype(np.uint8))
 
         return sample
 
@@ -63,7 +62,8 @@ tensor_train_dataset = restrictedCIFAR10(train_data, transform)
 tensor_test_dataset = restrictedCIFAR10(test_data, transform)
 print("Data loaded")
 
-
+# plt.imshow(np.swapaxes(tensor_train_dataset[0].numpy().T, 0,1))
+# plt.show()
 #batch size is set to 1, because it does not matter how many go through network at once - it is not training anyway
 batch_size=1
 train_dataloader = DataLoader(tensor_train_dataset, batch_size=batch_size, num_workers=3)
@@ -76,6 +76,7 @@ print("Vgg-19 loaded")
 #delete the last layer - the dropout layer is left, because it ensures l2-regularization (https://arxiv.org/pdf/1409.1556.pdf)
 model_vgg19.classifier = model_vgg19.classifier[:-1]
 print("Vgg19 last layer deleted")
+
 
 def retrieve_cnn_codes(data, model, output_shape=(5000,4096), batch_size=1):
     start = time.time()
@@ -94,6 +95,7 @@ def retrieve_cnn_codes(data, model, output_shape=(5000,4096), batch_size=1):
 for params in model_vgg19.parameters():
     params.requires_grad = False
 
+print(model_vgg19)
 print("Starting feature extraction...")
 cnn_codes_train = retrieve_cnn_codes(train_dataloader, model_vgg19, output_shape=(train_data.shape[0], 4096), batch_size=batch_size)
 cnn_codes_test = retrieve_cnn_codes(test_dataloader, model_vgg19, output_shape=(test_data.shape[0], 4096), batch_size=batch_size)
