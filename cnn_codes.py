@@ -31,12 +31,13 @@ test_data = reshape_images(test_data, size_image, n_channels)
 
 #introdcing the data
 #normalization values taken from this thread: https://github.com/kuangliu/pytorch-cifar/issues/19
+#although the normalization values for CIFAR-10 from pytorch forum are 0.5, 0.5, 0.5; 0.5, 0.5, 0.5
 transform = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize(224),
         transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), 
-                             (0.247, 0.243, 0.261))
+        # transforms.Normalize((0.4914, 0.4822, 0.4465), 
+        #                      (0.247, 0.243, 0.261))
         
     ])
 
@@ -72,7 +73,7 @@ test_dataloader = DataLoader(tensor_test_dataset, batch_size=batch_size, num_wor
 model_vgg19 = models.vgg19(pretrained=True)
 print("Vgg-19 loaded")
 
-#delete the last layer
+#delete the last layer - the dropout layer is left, because it ensures l2-regularization (https://arxiv.org/pdf/1409.1556.pdf)
 model_vgg19.classifier = model_vgg19.classifier[:-1]
 print("Vgg19 last layer deleted")
 
@@ -83,7 +84,7 @@ def retrieve_cnn_codes(data, model, output_shape=(5000,4096), batch_size=1):
     now = time.time()
     for i,x in enumerate(dataiter):
         current_cnn_codes = model(x)
-        cnn_codes[batch_size*i:batch_size*(i+1),:] = current_cnn_codes.numpy()
+        cnn_codes[batch_size*i:batch_size*(i+1)] = current_cnn_codes.numpy()
         if i%100==0:
             print(i, " completed in {}".format(time.time()-now))
             now = time.time()
@@ -93,13 +94,11 @@ def retrieve_cnn_codes(data, model, output_shape=(5000,4096), batch_size=1):
 for params in model_vgg19.parameters():
     params.requires_grad = False
 
-num_threads = 3
-torch.set_num_threads(num_threads)
 print("Starting feature extraction...")
 cnn_codes_train = retrieve_cnn_codes(train_dataloader, model_vgg19, output_shape=(train_data.shape[0], 4096), batch_size=batch_size)
 cnn_codes_test = retrieve_cnn_codes(test_dataloader, model_vgg19, output_shape=(test_data.shape[0], 4096), batch_size=batch_size)
 
-# cnn_codes = {"train": cnn_codes_train, "test": cnn_codes_test}
-# with open(path_network_representations, 'wb') as f:
-#     pickle.dump(cnn_codes, f)
-# print("CNN codes saved in a file {}".format(path_network_representations))
+cnn_codes = {"train": cnn_codes_train, "test": cnn_codes_test, "train_labels": train_labels, "test_labels": test_labels}
+with open(path_network_representations+"_not_normalized", 'wb') as f:
+    pickle.dump(cnn_codes, f)
+print("CNN codes saved in a file {}".format(path_network_representations))
