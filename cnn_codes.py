@@ -61,7 +61,7 @@ tensor_train_dataset = restrictedCIFAR10(train_data, transform)
 tensor_test_dataset = restrictedCIFAR10(test_data, transform)
 print("Data loaded")
 #batch size is set to 1, because it does not matter how many go through network at once - it is not training anyway
-batch_size=100
+batch_size=50
 train_dataloader = DataLoader(tensor_train_dataset, batch_size=batch_size, num_workers=3)
 test_dataloader = DataLoader(tensor_test_dataset, batch_size=batch_size, num_workers=3)
 
