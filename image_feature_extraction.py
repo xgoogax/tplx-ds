@@ -50,11 +50,4 @@ def reshape_images(data, size_image, n_channels, float=True):
 def extract_mean_color(image):
 	return np.mean(image,axis=(0,1))
 
-def label_names_extraction(path):
-	meta_batches = unpickle(path)
-	class_names =[x.decode('utf-8') for x in meta_batches[b'label_names']] 
-	mapping_classnames = dict()
-	for i,value in enumerate(class_names):
-		mapping_classnames[i] = value
-	return mapping_classnames
 

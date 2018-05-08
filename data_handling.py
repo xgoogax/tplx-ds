@@ -10,7 +10,6 @@ import pickle
 import random 
 import math
 
-
 #specifying some global variables that will be referred to in functions
 compressed_file_path = config['paths']['compressed_file']
 cifarpath = config['paths']['cifardatapath']
@@ -102,6 +101,14 @@ def unpickle(file):
 		dict = pickle.load(f, encoding='bytes')
 	return dict
 
+def label_names_extraction(path):
+	meta_batches = unpickle(path)
+	class_names =[x.decode('utf-8') for x in meta_batches[b'label_names']] 
+	mapping_classnames = dict()
+	for i,value in enumerate(class_names):
+		mapping_classnames[i] = value
+	return mapping_classnames
+
 """
 here the goal is to create the ultimate data structure for the training set that will be used throughout the experiment
 save parameter corresponds to saving it to file for further usage (if not, it will just be returned)
@@ -124,16 +131,19 @@ def remove_original_dataset(path=cifarpath):
 	print("Removed original dataset at {}".format(path))
 
 def restrict_dataset(initial_dataset_path, restricted_dataset_path, save=True, fraction=config['dataset_details']['fraction'], remove_original=False, random_state=42):
+	
+	random.seed(random_state)
+
 	restricted_dataset = []
 	restricted_labels = []
 	meta_batches = unpickle(os.path.join(initial_dataset_path, 'batches.meta'))
-	class_names =[x.decode('utf-8') for x in meta_batches[b'label_names']]
-	mapping_classnames = dict()
-	random.seed(random_state)
-	for i,value in enumerate(class_names):
-		mapping_classnames[i] = value
+	mapping_classnames = label_names_extraction(os.path.join(initial_dataset_path, 'batches.meta'))
 	#save metafile to the restricted dataset
 	if save:
+		if not os.path.exists(restricted_dataset_path):
+			os.makedirs(restricted_dataset_path)
+		else:
+			print("The data is not supposed to be saved and will be returned as values")
 		with open(os.path.join(restricted_dataset_path, 'batches.meta'), 'wb') as f:
 			pickle.dump(meta_batches, f)
 	if os.path.exists(initial_dataset_path):
@@ -154,8 +164,6 @@ def restrict_dataset(initial_dataset_path, restricted_dataset_path, save=True, f
 					current_subset['data'] = np.array(current_subset['data'])
 					current_subset['labels'] = np.array(current_subset['labels'])
 					if save:
-						if not os.path.exists(restricted_dataset_path):
-							os.makedirs(restricted_dataset_path)
 						with open(os.path.join(restricted_dataset_path, x), 'wb') as f:
 							pickle.dump(current_subset, f)
 					restricted_dataset.extend(imgs[random_subset])
@@ -164,7 +172,7 @@ def restrict_dataset(initial_dataset_path, restricted_dataset_path, save=True, f
 			print("Empty folder - get some data")
 			return 
 	else:
-		print("No such path {}".format(initial_dataset_path))
+		print("Path {} could not be found".format(initial_dataset_path))
 		return
 	if remove_original:
 		remove_original_dataset()
@@ -172,6 +180,8 @@ def restrict_dataset(initial_dataset_path, restricted_dataset_path, save=True, f
 
 
 if __name__ == "__main__":
+	if not os.path.exists(data_path):
+		os.makedirs(data_path)
 	retrieve_link(url, link_details=[dataset_version, lang], download=True)
 	if os.path.exists(cifarpath):
 		print('Files already extracted')
@@ -180,4 +190,4 @@ if __name__ == "__main__":
 			extract_file(compressed_file_path, data_path, remove_compressed=True)
 		else:
 			print("File could not be extracted, because it could not be found. Please download the data first.")
-	restrict_dataset(cifarpath, path_to_restricted_dataset, remove_original=True)
+	restrict_dataset(cifarpath, path_to_restricted_dataset, remove_original=False)
