@@ -146,7 +146,7 @@ def restrict_dataset(initial_dataset_path, restricted_dataset_path, save=True, f
 					for label in list(mapping_classnames.keys()):
 						indices_of_label = np.where(labels == label)[0]
 						#now take percent_of_dataset random indices
-						number_to_take = math.ceil(len(indices_of_label)*fraction)
+						number_to_take = math.ceil(len(indices_of_label)*float(fraction))
 						random.shuffle(indices_of_label)
 						random_subset = indices_of_label[:number_to_take]
 						current_subset['data'].extend(imgs[random_subset])
