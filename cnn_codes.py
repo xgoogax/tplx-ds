@@ -36,9 +36,8 @@ transform = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize(224),
         transforms.ToTensor(),
-        # transforms.Normalize((0.4914, 0.4822, 0.4465), 
-        #                      (0.247, 0.243, 0.261))
-        
+        transforms.Normalize((0.4914, 0.4822, 0.4465), 
+             (0.247, 0.243, 0.261)),
     ])
 class restrictedCIFAR10(Dataset):
     def __init__(self, data, transform):
@@ -51,19 +50,16 @@ class restrictedCIFAR10(Dataset):
     
     def __getitem__(self, idx):
         image = self.data[idx,:]
-        sample = image
+        sample = np.swapaxes(image,0,1)
 
         if self.transform:
-            sample = transform(image.astype(np.uint8))
+            sample = transform(sample.astype(np.uint8))
 
         return sample
 
 tensor_train_dataset = restrictedCIFAR10(train_data, transform)
 tensor_test_dataset = restrictedCIFAR10(test_data, transform)
 print("Data loaded")
-
-# plt.imshow(np.swapaxes(tensor_train_dataset[0].numpy().T, 0,1))
-# plt.show()
 #batch size is set to 1, because it does not matter how many go through network at once - it is not training anyway
 batch_size=1
 train_dataloader = DataLoader(tensor_train_dataset, batch_size=batch_size, num_workers=3)
@@ -101,6 +97,6 @@ cnn_codes_train = retrieve_cnn_codes(train_dataloader, model_vgg19, output_shape
 cnn_codes_test = retrieve_cnn_codes(test_dataloader, model_vgg19, output_shape=(test_data.shape[0], 4096), batch_size=batch_size)
 
 cnn_codes = {"train": cnn_codes_train, "test": cnn_codes_test, "train_labels": train_labels, "test_labels": test_labels}
-with open(path_network_representations+"_not_normalized", 'wb') as f:
+with open(path_network_representations, 'wb') as f:
     pickle.dump(cnn_codes, f)
 print("CNN codes saved in a file {}".format(path_network_representations))
