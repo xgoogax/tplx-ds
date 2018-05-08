@@ -61,12 +61,20 @@ tensor_train_dataset = restrictedCIFAR10(train_data, transform)
 tensor_test_dataset = restrictedCIFAR10(test_data, transform)
 print("Data loaded")
 #batch size is set to 1, because it does not matter how many go through network at once - it is not training anyway
-batch_size=1
+batch_size=50
 train_dataloader = DataLoader(tensor_train_dataset, batch_size=batch_size, num_workers=3)
 test_dataloader = DataLoader(tensor_test_dataset, batch_size=batch_size, num_workers=3)
 
 #initialize the pre-trained model
 model_vgg19 = models.vgg19(pretrained=True)
+
+if torch.cuda.is_available():
+    model_vgg19.cuda()
+    print('using gpu')
+else:
+    raise Exception("COULD NOT FIND GPU. I WILL BE SOOO SLOWWWWWWWWWWW :( ;(")
+
+
 print("Vgg-19 loaded")
 
 #delete the last layer - the dropout layer is left, because it ensures l2-regularization (https://arxiv.org/pdf/1409.1556.pdf)
@@ -76,11 +84,14 @@ print("Vgg19 last layer deleted")
 
 def retrieve_cnn_codes(data, model, output_shape=(5000,4096), batch_size=1):
     start = time.time()
+    model.eval()
     dataiter = iter(data)
     cnn_codes = np.zeros(output_shape)
     now = time.time()
     for i,x in enumerate(dataiter):
-        current_cnn_codes = model(x)
+        if torch.cuda.is_available():
+            x = x.cuda()
+        current_cnn_codes = model(x).cpu()
         cnn_codes[batch_size*i:batch_size*(i+1)] = current_cnn_codes.numpy()
         if i%100==0:
             print(i, " completed in {}".format(time.time()-now))
