@@ -61,7 +61,7 @@ def retrieve_link(url, link_details, download=False):
 		modified_links = []
 		for link in valid_links:
 			#unfortunately this is very specific and for this particular website, otherwise I wouldn't split
-			current_link = os.path.join("/".join(url.split("/")[:-1]),link.get("href"))
+			current_link ="/".join(url.split("/")[:-1]) + "/" + link.get("href"))
 
 			#you can specify if you want to download it immediately, or first save it somewhere (by default it is not downloaded)
 			if download and not os.path.exists(cifarpath):
