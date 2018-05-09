@@ -42,6 +42,8 @@ c=1
 scaler = StandardScaler()
 svm = SVC(kernel='linear', C=c, gamma=gamma)
 accuracy = []
+n_channels = 3
+size_image=32
 for params in model_vgg19.parameters():
         params.requires_grad = False
 if not os.path.exists(cifarpath):
@@ -53,9 +55,14 @@ else:
 	for fraction in fractions:
 		restrict_dataset(cifarpath, dataset_path_exp2, fraction=fraction, remove_original=False)
 		train_data, train_labels, test_data, test_labels = load_images(dataset_path_exp2)
-                print(train_data.shape)	  
-                train_loader = generate_dataset_and_loader(train_data)
-                test_loader = generate_dataset_and_loader(test_data)
+		limit =int(fraction * 5000)
+		train_data, train_labels = even_instances(train_data, train_labels, limit)
+		train_data = reshape_images(train_data, size_image, n_channels, float=False)
+		test_data = reshape_images(test_data, size_image, n_channels, float=False)	
+
+		print(train_data.shape)	  
+		train_loader = generate_dataset_and_loader(train_data)
+		test_loader = generate_dataset_and_loader(test_data)
 		cnn_codes_train = retrieve_cnn_codes(train_loader, model_vgg19, output_shape=(train_data.shape[0], 4096), batch_size=batch_size)
 		cnn_codes_test = retrieve_cnn_codes(test_loader, model_vgg19, output_shape=(test_data.shape[0], 4096), batch_size=batch_size)
 		scaled_data = scaler.fit_transform(cnn_codes_train)
