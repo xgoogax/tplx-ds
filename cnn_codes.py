@@ -1,6 +1,7 @@
 from config import config
 import pickle
 import torch
+import torch.nn as nn
 import numpy as np
 from torchvision import models, transforms
 from torch.utils.data import Dataset, DataLoader
@@ -8,6 +9,7 @@ import time
 from data_handling import unpickle
 from image_feature_extraction import load_images, reshape_images, even_instances
 import matplotlib.pyplot as plt 
+import math
 
 #path to network_trained_representations
 path_network_representations = config['paths']['network_representations']
@@ -33,7 +35,7 @@ if not dataset_normalized:
 
 #batch size can be specified in the config.ini file
 batch_size=int(config['dataset_details']['batch_size'])
-
+print(batch_size)
 class restrictedCIFAR10(Dataset):
     def __init__(self, data, transform):
 
@@ -45,7 +47,7 @@ class restrictedCIFAR10(Dataset):
     
     def __getitem__(self, idx):
         image = self.data[idx,:]
-        sample = np.swapaxes(image,0,1)
+        sample = image
 
         if self.transform:
             sample = transform(sample.astype(np.uint8))
@@ -55,11 +57,11 @@ class restrictedCIFAR10(Dataset):
 def generate_dataset_and_loader(data, transform=transform, batch_size=batch_size):
     tensor_dataset = restrictedCIFAR10(data, transform)
     data_loader = DataLoader(tensor_dataset, batch_size, num_workers=3)
-    return 
+    return data_loader
 
 def retrieve_cnn_codes(data, model, output_shape=(5000,4096), batch_size=batch_size):
     start = time.time()
-    num_batches = math.ceil(output_shape.shape[0]/batch_size)
+    num_batches = math.ceil(output_shape[0]/batch_size)
 
     #by default all modules are initialized to train mode, and we want it to be fixed
     model.eval()
@@ -68,14 +70,13 @@ def retrieve_cnn_codes(data, model, output_shape=(5000,4096), batch_size=batch_s
     cnn_codes = np.zeros(output_shape)
     now = time.time()
     for i,x in enumerate(dataiter):
-
         #check if the machine has gpu access
         if torch.cuda.is_available():
             x = x.cuda()
-            out = model(x).cpu()
+            current_cnn_codes = model(x).cpu()
         else:
-            out = model(x)
-        cnn_codes[batch_size*i:batch_size*(i+1)] = out.numpy()
+            current_cnn_codes = model(x)
+        cnn_codes[batch_size*i:batch_size*(i+1)] = current_cnn_codes.numpy()
         print("{}/{} batches completed in {}".format(i,num_batches,time.time()-now))
         now = time.time()
     print("Extraction completed in {} seconds".format(time.time()-start))
@@ -105,7 +106,7 @@ if __name__ == "__main__":
     else:
         print("could not find gpu. using cpu")
 #delete the last layer - the dropout layer is left, because it ensures l2-regularization (https://arxiv.org/pdf/1409.1556.pdf)
-    layers = nn.Sequential(*list(model_vgg19.children())[:-1])
+    layers = nn.Sequential(*list(model_vgg19.classifier.children())[:-1])
     model_vgg19.classifier = layers
     print("Vgg19 last layer deleted")
     print(model_vgg19)
